@@ -1,13 +1,13 @@
 replicaCount: 2
 
 image:
-  repository: dockersamples/todo-app
+  repository: dockersamples/101-tutorial
   pullPolicy: IfNotPresent
   tag: "latest"
 
 service:
   type: ClusterIP
-  port: 3000
+  port: 80
 
 resources:
   limits:
