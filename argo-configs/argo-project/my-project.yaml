@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: my-project
+  namespace: argo-cd
+  # Finalizer enables cascading deletion of applications when project is deleted
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Custom Argo CD Project with repo and destination restrictions
+
+  # Restrict which git repositories applications in this project can pull from
+  sourceRepos:
+    - 'https://github.com/irajatpandey/argo-cd-learning.git'
+
+  # Restrict which target clusters and namespaces applications can be deployed to
+  destinations:
+    - namespace: 'default'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'dev'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'prod'
+      server: 'https://kubernetes.default.svc'
+
+  # Whitelist allowed cluster-scoped resources
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Whitelist allowed namespace-scoped resources
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
