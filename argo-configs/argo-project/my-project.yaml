@@ -3,17 +3,16 @@ kind: AppProject
 metadata:
   name: my-project
   namespace: argo-cd
-  # Finalizer enables cascading deletion of applications when project is deleted
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: Custom Argo CD Project with repo and destination restrictions
+  description: Custom Argo CD Project with privileges restricted to Namespace, Pod, Deployment, ConfigMap, StatefulSet, Service, and Ingress
 
   # Restrict which git repositories applications in this project can pull from
   sourceRepos:
     - 'https://github.com/irajatpandey/argo-cd-learning.git'
 
-  # Restrict which target clusters and namespaces applications can be deployed to
+  # Restrict target clusters and namespaces
   destinations:
     - namespace: 'default'
       server: 'https://kubernetes.default.svc'
@@ -22,12 +21,22 @@ spec:
     - namespace: 'prod'
       server: 'https://kubernetes.default.svc'
 
-  # Whitelist allowed cluster-scoped resources
+  # Cluster-scoped resources whitelist (Namespace)
   clusterResourceWhitelist:
-    - group: '*'
-      kind: '*'
+    - group: ''
+      kind: Namespace
 
-  # Whitelist allowed namespace-scoped resources
+  # Namespace-scoped resources whitelist (Pod, Deployment, ConfigMap, StatefulSet, Service, Ingress)
   namespaceResourceWhitelist:
-    - group: '*'
-      kind: '*'
+    - group: ''
+      kind: Pod
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Service
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: 'networking.k8s.io'
+      kind: Ingress
