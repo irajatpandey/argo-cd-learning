@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo-app
+  namespace: argo-cd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/irajatpandey/argo-cd-learning/my-helm-app.git
+    targetRevision: HEAD
+    path: todo-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+
+      
