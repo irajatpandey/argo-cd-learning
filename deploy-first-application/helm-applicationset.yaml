@@ -18,7 +18,7 @@ spec:
       project: default
       source:
         # Replace with your GitHub Repository URL
-        repoURL: https://github.com/YOUR_GITHUB_USERNAME/argo-cd-learning.git
+        repoURL: https://github.com/irajatpandey/argo-cd-learning.git
         targetRevision: HEAD
         path: my-helm-app
         helm:
