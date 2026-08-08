@@ -1,13 +1,13 @@
 replicaCount: 2
 
 image:
-  repository: nginx
+  repository: dockersamples/todo-app
   pullPolicy: IfNotPresent
-  tag: "alpine"
+  tag: "latest"
 
 service:
   type: ClusterIP
-  port: 80
+  port: 3000
 
 resources:
   limits:
