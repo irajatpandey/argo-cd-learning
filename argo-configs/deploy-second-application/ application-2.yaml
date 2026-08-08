@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/irajatpandey/argo-cd-learning/my-helm-app.git
+    repoURL: https://github.com/irajatpandey/argo-cd-learning.git
     targetRevision: HEAD
-    path: todo-app
+    path: my-helm-app
   destination:
     server: https://kubernetes.default.svc
     namespace: default
