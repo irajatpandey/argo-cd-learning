@@ -1,0 +1,32 @@
+{{- if and .Values.hooks.enabled .Values.hooks.preSync.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "my-helm-app.fullname" . }}-presync-job
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    {{- include "my-helm-app.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "my-helm-app.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: presync-task
+          image: {{ .Values.hooks.preSync.image }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "=========================================="
+              echo "[PreSync Hook] Running pre-sync task..."
+              echo "[PreSync Hook] Simulating database migration / pre-checks..."
+              sleep 5
+              echo "[PreSync Hook] Pre-sync task completed successfully!"
+              echo "=========================================="
+  backoffLimit: 2
+{{- end }}

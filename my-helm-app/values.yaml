@@ -15,3 +15,16 @@ resources:
   requests:
     cpu: 50m
     memory: 64Mi
+
+hooks:
+  enabled: true
+  preSync:
+    enabled: true
+    image: busybox:1.36
+  postSync:
+    enabled: true
+    image: busybox:1.36
+  syncFail:
+    enabled: true
+    image: busybox:1.36
+

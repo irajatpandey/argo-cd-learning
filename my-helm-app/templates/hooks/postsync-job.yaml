@@ -1,0 +1,32 @@
+{{- if and .Values.hooks.enabled .Values.hooks.postSync.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "my-helm-app.fullname" . }}-postsync-job
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    {{- include "my-helm-app.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "my-helm-app.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: postsync-task
+          image: {{ .Values.hooks.postSync.image }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "=========================================="
+              echo "[PostSync Hook] Running post-sync task..."
+              echo "[PostSync Hook] Simulating smoke test & slack notification..."
+              sleep 5
+              echo "[PostSync Hook] Post-sync task completed successfully!"
+              echo "=========================================="
+  backoffLimit: 2
+{{- end }}

@@ -13,6 +13,8 @@ This repository contains Helm charts, Argo CD Application manifests, and AppProj
 6. [Deploying Argo CD Applications](#6-deploying-argo-cd-applications)
 7. [Creating and Managing AppProjects](#7-creating-and-managing-appprojects)
 8. [Troubleshooting & Handy Commands](#8-troubleshooting--handy-commands)
+9. [Argo CD Sync Hooks](#9-argo-cd-sync-hooks)
+
 
 ---
 
@@ -187,3 +189,63 @@ If Argo CD gets stuck in `another operation is already in progress`:
 ```bash
 argocd app terminate-op todo-app
 ```
+
+---
+
+## 9. Argo CD Sync Hooks
+
+Argo CD resource hooks allow executing custom logic during specific phases of an application sync operation.
+
+### Hook Phases & Annotations
+| Hook Phase | Annotation | Description | Example Use Cases |
+| :--- | :--- | :--- | :--- |
+| **PreSync** | `argocd.argoproj.io/hook: PreSync` | Runs **before** main manifests are applied | DB schema migration, backup snapshots, pre-flight checks |
+| **Sync** | `argocd.argoproj.io/hook: Sync` | Runs **during** manifest deployment | Complex orchestration steps alongside app resources |
+| **PostSync** | `argocd.argoproj.io/hook: PostSync` | Runs **after** main manifests reach Healthy state | Smoke/integration testing, cache warming, Slack notifications |
+| **SyncFail** | `argocd.argoproj.io/hook: SyncFail` | Runs if the sync operation **fails** | Automated rollback triggers, alert notifications, cleanup |
+
+### Deletion Policies
+Hook resources remain in the cluster after execution unless a deletion policy is specified:
+- `argocd.argoproj.io/hook-delete-policy: BeforeHookCreation` *(Recommended for Jobs)*: Deletes the existing hook resource before creating a new one on the next sync.
+- `argocd.argoproj.io/hook-delete-policy: HookSucceeded`: Automatically deletes the hook resource once it succeeds.
+- `argocd.argoproj.io/hook-delete-policy: HookFailed`: Automatically deletes the hook resource if it fails.
+
+---
+
+### Hands-On: Testing Sync Hooks on `my-helm-app`
+
+The local Helm chart (`my-helm-app/`) includes configured Sync Hook templates in `my-helm-app/templates/hooks/`:
+- `presync-job.yaml` (`PreSync`)
+- `postsync-job.yaml` (`PostSync`)
+- `syncfail-job.yaml` (`SyncFail`)
+
+#### Step 1: Deploy or Update the Application
+```bash
+kubectl apply -f argo-configs/deploy-first-application/helm-application.yaml
+```
+
+#### Step 2: Trigger Application Sync
+```bash
+argocd app sync my-helm-app
+```
+
+#### Step 3: Monitor Hook Execution & Phases
+Watch the execution phases in real-time:
+```bash
+# Watch pod creation in default namespace
+kubectl get pods -n default -w
+```
+You will observe:
+1. `release-name-my-helm-app-presync-job-xxxx` runs and completes first.
+2. The main application `Deployment` is created / updated.
+3. `release-name-my-helm-app-postsync-job-xxxx` runs after the deployment becomes `Healthy`.
+
+#### Step 4: View Hook Job Logs
+```bash
+# Check logs for PreSync job
+kubectl logs job/my-helm-app-presync-job -n default
+
+# Check logs for PostSync job
+kubectl logs job/my-helm-app-postsync-job -n default
+```
+

@@ -1,0 +1,29 @@
+{{- if and .Values.hooks.enabled .Values.hooks.syncFail.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "my-helm-app.fullname" . }}-syncfail-job
+  annotations:
+    argocd.argoproj.io/hook: SyncFail
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    {{- include "my-helm-app.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "my-helm-app.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: syncfail-task
+          image: {{ .Values.hooks.syncFail.image }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "=========================================="
+              echo "[SyncFail Hook] Sync failed! Executing fallback/alert procedure..."
+              echo "=========================================="
+  backoffLimit: 1
+{{- end }}
