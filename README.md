@@ -249,3 +249,16 @@ kubectl logs job/my-helm-app-presync-job -n default
 kubectl logs job/my-helm-app-postsync-job -n default
 ```
 
+> **Troubleshooting `resource batch:Job is not permitted in project my-project`:**  
+> If your application belongs to a custom `AppProject` (such as `my-project`), ensure `group: 'batch'` and `kind: Job` are listed under `namespaceResourceWhitelist` in `argo-configs/argo-project/my-project.yaml`:
+> ```yaml
+> namespaceResourceWhitelist:
+>   - group: 'batch'
+>     kind: Job
+> ```
+> Update the AppProject configuration with:
+> ```bash
+> kubectl apply -f argo-configs/argo-project/my-project.yaml
+> ```
+
+
