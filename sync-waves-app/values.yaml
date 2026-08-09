@@ -1,0 +1,23 @@
+config:
+  env: "production"
+  appName: "Sync Waves Demo"
+
+secret:
+  dbPassword: "supersecretpassword123"
+
+db:
+  replicaCount: 1
+  image:
+    repository: redis
+    tag: "7.2-alpine"
+    pullPolicy: IfNotPresent
+
+web:
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: "alpine"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80

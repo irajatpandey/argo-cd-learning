@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sync-waves-app
+description: A Helm chart demonstrating Argo CD Sync Waves (Wave -1 Config, Wave 1 DB, Wave 2 Web)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

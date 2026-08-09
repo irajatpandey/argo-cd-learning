@@ -14,6 +14,8 @@ This repository contains Helm charts, Argo CD Application manifests, and AppProj
 7. [Creating and Managing AppProjects](#7-creating-and-managing-appprojects)
 8. [Troubleshooting & Handy Commands](#8-troubleshooting--handy-commands)
 9. [Argo CD Sync Hooks](#9-argo-cd-sync-hooks)
+10. [Argo CD Sync Waves](#10-argo-cd-sync-waves)
+
 
 
 ---
@@ -260,5 +262,60 @@ kubectl logs job/my-helm-app-postsync-job -n default
 > ```bash
 > kubectl apply -f argo-configs/argo-project/my-project.yaml
 > ```
+
+---
+
+## 10. Argo CD Sync Waves
+
+**Sync Waves** control the execution order of Kubernetes resources during an Argo CD sync phase. Resources are ordered by their wave number using the annotation `argocd.argoproj.io/sync-wave: "<number>"` (default is `0`).
+
+### How Sync Waves Work
+1. Argo CD sorts resources by wave number (lowest integer first, e.g. `-1` before `1` before `2`).
+2. Argo CD applies all resources in Wave $N$.
+3. Argo CD waits for all resources in Wave $N$ to reach a **Healthy** state before proceeding to Wave $N+1$.
+
+### Sync Waves vs Sync Hooks
+| Feature | Sync Waves | Sync Hooks |
+| :--- | :--- | :--- |
+| **Annotation** | `argocd.argoproj.io/sync-wave: "N"` | `argocd.argoproj.io/hook: PreSync \| PostSync` |
+| **Purpose** | Sequential ordering of regular manifests | Ephemeral pre/post deployment tasks (e.g. Jobs) |
+| **Scope** | Applies to any resource (ConfigMap, Service, Deployment) | Typically applied to Kubernetes Jobs or Pods |
+| **State Wait** | Waits for Wave $N$ to be `Healthy` before Wave $N+1$ | Waits for `PreSync` to complete before `Sync` starts |
+
+---
+
+### Hands-On: Testing Sync Waves on `sync-waves-app`
+
+The `sync-waves-app/` chart defines resources across 3 waves:
+- **Wave -1**: `ConfigMap` & `Secret` (`01-config-and-secret.yaml`)
+- **Wave 1**: Redis Database `Deployment` & `Service` (`02-db.yaml`)
+- **Wave 2**: Web Frontend `Deployment` & `Service` (`03-web.yaml`)
+
+#### Step 1: Deploy the Sync Waves Application Manifest
+```bash
+kubectl apply -f argo-configs/sync-waves/sync-waves-application.yaml
+```
+
+#### Step 2: Trigger Application Sync
+```bash
+argocd app sync sync-waves-app
+```
+
+#### Step 3: Observe Wave Progression
+Watch resources get created wave-by-wave:
+```bash
+# Watch pod creation in real-time
+kubectl get pods -n default -w
+```
+Execution Timeline:
+1. **Wave -1**: `sync-waves-config` ConfigMap & `sync-waves-secret` Secret are created.
+2. **Wave 1**: `sync-waves-db` Redis pod is started. Argo CD waits until Redis is `Running` & `Healthy`.
+3. **Wave 2**: `sync-waves-web` Nginx pod is created once Redis is Healthy.
+
+#### Step 4: Verify Application Status via CLI
+```bash
+argocd app get sync-waves-app
+```
+
 
 
