@@ -6,7 +6,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: Custom Argo CD Project with privileges restricted to Namespace, Pod, Deployment, ConfigMap, StatefulSet, Service, Ingress, and Job
+  description: Custom Argo CD Project with privileges restricted to Namespace, Pod, Secret, ConfigMap, Service, PVC, ServiceAccount, Deployment, StatefulSet, Ingress, and Job
 
   # Restrict which git repositories applications in this project can pull from
   sourceRepos:
@@ -26,14 +26,20 @@ spec:
     - group: ''
       kind: Namespace
 
-  # Namespace-scoped resources whitelist (Pod, Deployment, ConfigMap, StatefulSet, Service, Ingress, Job)
+  # Namespace-scoped resources whitelist (Pod, Secret, ConfigMap, Service, PVC, ServiceAccount, Deployment, StatefulSet, Ingress, Job)
   namespaceResourceWhitelist:
     - group: ''
       kind: Pod
     - group: ''
+      kind: Secret
+    - group: ''
       kind: ConfigMap
     - group: ''
       kind: Service
+    - group: ''
+      kind: PersistentVolumeClaim
+    - group: ''
+      kind: ServiceAccount
     - group: 'apps'
       kind: Deployment
     - group: 'apps'
@@ -42,4 +48,5 @@ spec:
       kind: Ingress
     - group: 'batch'
       kind: Job
+
 

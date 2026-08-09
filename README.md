@@ -117,7 +117,7 @@ git remote add origin https://github.com/irajatpandey/argo-cd-learning.git
 
 # Push to GitHub
 git push -u origin main
-```
+``` 
 
 ---
 
@@ -251,17 +251,20 @@ kubectl logs job/my-helm-app-presync-job -n default
 kubectl logs job/my-helm-app-postsync-job -n default
 ```
 
-> **Troubleshooting `resource batch:Job is not permitted in project my-project`:**  
-> If your application belongs to a custom `AppProject` (such as `my-project`), ensure `group: 'batch'` and `kind: Job` are listed under `namespaceResourceWhitelist` in `argo-configs/argo-project/my-project.yaml`:
+> **Troubleshooting `resource <group>:<kind> is not permitted in project my-project`:**  
+> If your application belongs to a custom `AppProject` (such as `my-project`), ensure that required resource kinds (e.g. `Secret`, `Job`, `ConfigMap`, etc.) are listed under `namespaceResourceWhitelist` in `argo-configs/argo-project/my-project.yaml`:
 > ```yaml
 > namespaceResourceWhitelist:
+>   - group: ''
+>     kind: Secret
 >   - group: 'batch'
 >     kind: Job
 > ```
-> Update the AppProject configuration with:
+> Update the AppProject configuration in your cluster:
 > ```bash
 > kubectl apply -f argo-configs/argo-project/my-project.yaml
 > ```
+
 
 ---
 
@@ -270,17 +273,40 @@ kubectl logs job/my-helm-app-postsync-job -n default
 **Sync Waves** control the execution order of Kubernetes resources during an Argo CD sync phase. Resources are ordered by their wave number using the annotation `argocd.argoproj.io/sync-wave: "<number>"` (default is `0`).
 
 ### How Sync Waves Work
-1. Argo CD sorts resources by wave number (lowest integer first, e.g. `-1` before `1` before `2`).
-2. Argo CD applies all resources in Wave $N$.
-3. Argo CD waits for all resources in Wave $N$ to reach a **Healthy** state before proceeding to Wave $N+1$.
+1. **Negative Wave Priority**: Resources are sorted by wave number in ascending order (lowest integer first). **More negative numbers run first with highest priority** (e.g. `-5` runs before `-1`, `-1` runs before `0`, `0` runs before `2`).
+2. **Phase Wait**: Argo CD applies all resources in Wave $N$ and waits for them to reach a **Healthy** state before proceeding to Wave $N+1$.
 
-### Sync Waves vs Sync Hooks
+### PreSync Phase vs Sync Wave Priority
+> [!IMPORTANT]
+> **Phase ALWAYS takes precedence over Wave Number!**  
+> Argo CD splits operations into **Phases** (`PreSync` $\rightarrow$ `Sync` $\rightarrow$ `PostSync`), and sorts resources by **Waves** within each phase.  
+> Even if a manifest in the `Sync` phase has `sync-wave: "-100"`, a `PreSync` hook with `sync-wave: "100"` will **STILL RUN FIRST** because `PreSync` is executed in an earlier Phase!
+
+#### Execution Order Matrix
+```text
+PHASE 1: PreSync Phase
+  ├── PreSync Hook (sync-wave: "-1")   <--- 1st
+  └── PreSync Hook (sync-wave: "1")    <--- 2nd
+  
+PHASE 2: Sync Phase (Normal Manifests)
+  ├── ConfigMap / Secret (sync-wave: "-1") <--- 3rd
+  ├── DB Deployment      (sync-wave: "1")  <--- 4th
+  └── Web Deployment     (sync-wave: "2")  <--- 5th
+
+PHASE 3: PostSync Phase
+  ├── PostSync Hook (sync-wave: "-1")  <--- 6th
+  └── PostSync Hook (sync-wave: "1")   <--- 7th
+```
+
+### Sync Waves vs Sync Hooks Comparison
 | Feature | Sync Waves | Sync Hooks |
 | :--- | :--- | :--- |
 | **Annotation** | `argocd.argoproj.io/sync-wave: "N"` | `argocd.argoproj.io/hook: PreSync \| PostSync` |
 | **Purpose** | Sequential ordering of regular manifests | Ephemeral pre/post deployment tasks (e.g. Jobs) |
 | **Scope** | Applies to any resource (ConfigMap, Service, Deployment) | Typically applied to Kubernetes Jobs or Pods |
+| **Precedence** | Applied *within* the current Sync Phase | Phase (`PreSync`) runs *before* `Sync` phase |
 | **State Wait** | Waits for Wave $N$ to be `Healthy` before Wave $N+1$ | Waits for `PreSync` to complete before `Sync` starts |
+
 
 ---
 
@@ -316,6 +342,26 @@ Execution Timeline:
 ```bash
 argocd app get sync-waves-app
 ```
+
+
+---
+
+### 💡 Key Concepts & Production Gotchas
+
+1. **Health Dependency Blocking**:
+   Argo CD **WILL NOT** proceed to Wave $N+1$ until **ALL** resources in Wave $N$ become `Healthy` or `Succeeded`. If a deployment in Wave 1 enters `CrashLoopBackOff` or `ImagePullBackOff`, Wave 2 will never be applied.
+
+2. **Reverse Deletion Order**:
+   When an application is deleted or pruned, Argo CD deletes resources in **REVERSE wave order** (highest wave first).  
+   *Example:* Wave 2 (Web) $\rightarrow$ Wave 1 (DB) $\rightarrow$ Wave -1 (Config/Secret). This prevents the web application from failing due to an prematurely deleted database or secret during teardown.
+
+3. **Same-Wave Ordering Rule**:
+   If multiple resources share the **SAME wave number** (or no wave annotation, defaulting to `0`), Argo CD orders them by **Kind Priority**:
+   `Namespace` $\rightarrow$ `CRD` $\rightarrow$ `ServiceAccount` $\rightarrow$ `Role` $\rightarrow$ `ConfigMap` $\rightarrow$ `Secret` $\rightarrow$ `Service` $\rightarrow$ `Deployment` $\rightarrow$ `StatefulSet` $\rightarrow$ `Ingress`.
+
+4. **Default Wave (`0`)**:
+   Any resource without an explicit `argocd.argoproj.io/sync-wave` annotation defaults to **Wave `0`**.
+
 
 
 
